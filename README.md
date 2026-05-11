@@ -1,4 +1,5 @@
 Just Share Stuff - Mobile Application Project SDG 12(Responsible production and consumption)
+
 Problem Statement:
 University communities often waste usable items such as books, electronics, clothing and more because there is no simple platform for students and staff to resell or donate them. This increases unnecessary waste and environmental impact. 
 My solution is a campus marketplace app that encourages reselling and donating used items to promote sustainable consumption and reduce wastage.
