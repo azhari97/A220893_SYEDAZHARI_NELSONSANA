@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.Flow
 interface OrderDao {
     @Insert
     suspend fun insert(order: OrderEntity)
-
     @Query("SELECT * FROM orders ORDER BY id DESC")
     fun getAllOrders(): Flow<List<OrderEntity>>
 }

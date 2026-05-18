@@ -7,9 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(entities = [OrderEntity::class], version = 1, exportSchema = false)
 abstract class OrderDatabase : RoomDatabase() {
-
     abstract fun orderDao(): OrderDao
-
     companion object {
         @Volatile
         private var Instance: OrderDatabase? = null
