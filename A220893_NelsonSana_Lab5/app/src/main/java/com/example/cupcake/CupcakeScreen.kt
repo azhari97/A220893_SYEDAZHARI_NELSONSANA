@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.example.cupcake
 
 import android.content.Context
@@ -21,10 +22,10 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,7 +47,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.cupcake.data.DataSource
-import com.example.cupcake.data.OrderUiState
+import com.example.cupcake.ui.OrderHistoryScreen
 import com.example.cupcake.ui.OrderSummaryScreen
 import com.example.cupcake.ui.OrderViewModel
 import com.example.cupcake.ui.SelectOptionScreen
@@ -59,7 +60,8 @@ enum class CupcakeScreen(@StringRes val title: Int) {
     Start(title = R.string.app_name),
     Flavor(title = R.string.choose_flavor),
     Pickup(title = R.string.choose_pickup_date),
-    Summary(title = R.string.order_summary)
+    Summary(title = R.string.order_summary),
+    History(title = R.string.order_history)
 }
 
 /**
@@ -70,6 +72,8 @@ fun CupcakeAppBar(
     currentScreen: CupcakeScreen,
     canNavigateBack: Boolean,
     navigateUp: () -> Unit,
+    onSummaryButtonClicked: () -> Unit,
+    onHistoryButtonClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     TopAppBar(
@@ -87,13 +91,31 @@ fun CupcakeAppBar(
                     )
                 }
             }
+        },
+        actions = {
+            if (currentScreen != CupcakeScreen.History) {
+                IconButton(onClick = onHistoryButtonClicked) {
+                    Icon(
+                        imageVector = Icons.Filled.History,
+                        contentDescription = stringResource(R.string.order_history)
+                    )
+                }
+            }
+            if (currentScreen != CupcakeScreen.Summary && currentScreen != CupcakeScreen.Start && currentScreen != CupcakeScreen.History) {
+                IconButton(onClick = onSummaryButtonClicked) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.List,
+                        contentDescription = stringResource(R.string.order_summary)
+                    )
+                }
+            }
         }
     )
 }
 
 @Composable
 fun CupcakeApp(
-    viewModel: OrderViewModel = viewModel(),
+    viewModel: OrderViewModel = viewModel(factory = OrderViewModel.Factory),
     navController: NavHostController = rememberNavController()
 ) {
     // Get current back stack entry
@@ -108,7 +130,9 @@ fun CupcakeApp(
             CupcakeAppBar(
                 currentScreen = currentScreen,
                 canNavigateBack = navController.previousBackStackEntry != null,
-                navigateUp = { navController.navigateUp() }
+                navigateUp = { navController.navigateUp() },
+                onSummaryButtonClicked = { navController.navigate(CupcakeScreen.Summary.name) },
+                onHistoryButtonClicked = { navController.navigate(CupcakeScreen.History.name) }
             )
         }
     ) { innerPadding ->
@@ -119,7 +143,6 @@ fun CupcakeApp(
             startDestination = CupcakeScreen.Start.name,
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
         ) {
             composable(route = CupcakeScreen.Start.name) {
@@ -167,8 +190,16 @@ fun CupcakeApp(
                         cancelOrderAndNavigateToStart(viewModel, navController)
                     },
                     onSendButtonClicked = { subject: String, summary: String ->
+                        viewModel.saveOrder()
                         shareOrder(context, subject = subject, summary = summary)
                     },
+                    modifier = Modifier.fillMaxHeight()
+                )
+            }
+            composable(route = CupcakeScreen.History.name) {
+                val allOrders by viewModel.allOrders.collectAsState()
+                OrderHistoryScreen(
+                    orders = allOrders,
                     modifier = Modifier.fillMaxHeight()
                 )
             }

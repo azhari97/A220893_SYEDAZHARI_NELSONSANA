@@ -1,26 +1,21 @@
-/*
- * Copyright (C) 2023 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.example.cupcake.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.cupcake.CupcakeApplication
+import com.example.cupcake.data.OrderRepository
 import com.example.cupcake.data.OrderUiState
+import com.example.cupcake.data.local.OrderEntity
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -36,13 +31,22 @@ private const val PRICE_FOR_SAME_DAY_PICKUP = 3.00
  * [OrderViewModel] holds information about a cupcake order in terms of quantity, flavor, and
  * pickup date. It also knows how to calculate the total price based on these order details.
  */
-class OrderViewModel : ViewModel() {
+class OrderViewModel(private val repository: OrderRepository) : ViewModel() {
 
     /**
      * Cupcake state for this order
      */
     private val _uiState = MutableStateFlow(OrderUiState(pickupOptions = pickupOptions()))
     val uiState: StateFlow<OrderUiState> = _uiState.asStateFlow()
+
+    /**
+     * Expose all orders from the database
+     */
+    val allOrders: StateFlow<List<OrderEntity>> = repository.allOrders.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     /**
      * Set the quantity [numberCupcakes] of cupcakes for this order's state and update the price
@@ -86,6 +90,22 @@ class OrderViewModel : ViewModel() {
     }
 
     /**
+     * Save the order to the database
+     */
+    fun saveOrder() {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            val order = OrderEntity(
+                quantity = currentState.quantity,
+                flavor = currentState.flavor,
+                date = currentState.date,
+                price = currentState.price
+            )
+            repository.insert(order)
+        }
+    }
+
+    /**
      * Returns the calculated price based on the order details.
      */
     private fun calculatePrice(
@@ -114,5 +134,14 @@ class OrderViewModel : ViewModel() {
             calendar.add(Calendar.DATE, 1)
         }
         return dateOptions
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application = (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as CupcakeApplication)
+                OrderViewModel(application.repository)
+            }
+        }
     }
 }
