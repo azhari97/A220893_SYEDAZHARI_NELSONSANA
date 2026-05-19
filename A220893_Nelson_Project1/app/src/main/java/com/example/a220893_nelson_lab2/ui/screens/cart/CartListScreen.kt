@@ -216,7 +216,7 @@ fun CartItemCard(
                         label = {
                             Text(
                                 when (cartItem.status) {
-                                    0 -> "Buy Now"
+                                    0 -> "In Cart"
                                     1 -> "Awaiting Seller"
                                     2 -> "Accepted"
                                     3 -> "Rejected"
@@ -386,7 +386,7 @@ fun CartItemCard(
                                                 extraDesc = it
                                             },
                                             label = {
-                                                Text("Meeting Details")
+                                                Text("Meetup Details")
                                             },
                                             modifier = Modifier.fillMaxWidth(),
                                             shape = RoundedCornerShape(14.dp)
@@ -442,7 +442,7 @@ fun CartItemCard(
                                         )
 
                                         InfoRow(
-                                            title = "Meeting Details",
+                                            title = "Meetup Details",
                                             value = cartItem.extraDetails
                                         )
 
@@ -472,7 +472,7 @@ fun CartItemCard(
                                         )
 
                                         InfoRow(
-                                            title = "Meeting Details",
+                                            title = "Meetup Details",
                                             value = cartItem.extraDetails
                                         )
 
@@ -503,7 +503,7 @@ fun CartItemCard(
                                         )
 
                                         InfoRow(
-                                            title = "Meeting Details",
+                                            title = "Meetup Details",
                                             value = cartItem.extraDetails
                                         )
 

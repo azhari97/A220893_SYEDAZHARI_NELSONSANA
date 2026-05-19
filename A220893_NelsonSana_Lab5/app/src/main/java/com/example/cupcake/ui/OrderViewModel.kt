@@ -106,6 +106,15 @@ class OrderViewModel(private val repository: OrderRepository) : ViewModel() {
     }
 
     /**
+     * Delete an order from the database
+     */
+    fun deleteOrder(order: OrderEntity) {
+        viewModelScope.launch {
+            repository.delete(order)
+        }
+    }
+
+    /**
      * Returns the calculated price based on the order details.
      */
     private fun calculatePrice(

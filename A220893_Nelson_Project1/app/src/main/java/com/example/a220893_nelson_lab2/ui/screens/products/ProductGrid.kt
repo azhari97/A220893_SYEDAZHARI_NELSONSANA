@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -92,21 +93,22 @@ fun ProductCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
+//            .defaultMinSize(178.dp,188.dp)
             .clickable {
                 expanded = !expanded
             }
             .animateContentSize(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 6.dp
-        )
+//        colors = CardDefaults.cardColors(
+//            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+//        ),
+//        elevation = CardDefaults.cardElevation(
+//            defaultElevation = 6.dp
+//        )
     ) {
 
         Column(
-            modifier = Modifier.padding(14.dp)
+            modifier = Modifier.padding(8.dp)
         ) {
 
             Row(
@@ -116,6 +118,8 @@ fun ProductCard(
                 Surface(
                     shape = RoundedCornerShape(18.dp),
                     tonalElevation = 4.dp,
+                    color =  MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier=Modifier.padding(end=4.dp)
 
                 ) {
                     val context = LocalContext.current
@@ -125,12 +129,12 @@ fun ProductCard(
                         ),
                         contentDescription = null,
                         modifier = Modifier
-                            .size(60.dp)
+                            .size(80.dp)
                             .padding(8.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(14.dp))
+//                Spacer(modifier = Modifier.padding(horizontal = 4.dp))
 
                 Column(
                     modifier = Modifier.weight(1f)
@@ -141,7 +145,7 @@ fun ProductCard(
                         style = MaterialTheme.typography.titleMedium
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.padding(vertical = 2.dp))
 
                     Text(
                         text = product.type,
@@ -149,7 +153,7 @@ fun ProductCard(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.padding(vertical = 2.dp))
 
                     AssistChip(
                         onClick = { },
@@ -158,7 +162,7 @@ fun ProductCard(
                         }
                     )
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.padding(vertical = 2.dp))
 
                     Text(
                         text = "RM ${product.price}",
@@ -169,9 +173,9 @@ fun ProductCard(
             }
 
             if (expanded) {
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.padding(vertical = 4.dp))
                 HorizontalDivider()
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.padding(vertical = 4.dp))
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -187,7 +191,7 @@ fun ProductCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.padding(vertical = 4.dp))
 
                 Button(
                     onClick = {

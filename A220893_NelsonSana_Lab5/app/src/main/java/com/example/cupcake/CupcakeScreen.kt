@@ -200,6 +200,7 @@ fun CupcakeApp(
                 val allOrders by viewModel.allOrders.collectAsState()
                 OrderHistoryScreen(
                     orders = allOrders,
+                    onDeleteButtonClicked = { viewModel.deleteOrder(it) },
                     modifier = Modifier.fillMaxHeight()
                 )
             }

@@ -9,4 +9,8 @@ class OrderRepository(private val orderDao: OrderDao) {
     suspend fun insert(order: OrderEntity) {
         orderDao.insert(order)
     }
+    suspend fun delete(order: OrderEntity) {
+        orderDao.delete(order)
+    }
+
 }
