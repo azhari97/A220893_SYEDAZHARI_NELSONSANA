@@ -6,15 +6,21 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "cart")
 data class CartEntity(
     @PrimaryKey(autoGenerate = true)
-    val id:Int = 0,
-    val itemId:String,
-    val sellerId:Int = 0,
-    val buyerId:Int = 0,
-    val dealMethod:String,
-    val paymentAttachmentUrl:String,
-    val finalPrice:Double,
-    val meetLocation:String,
-    val extraDetails:String,
-    val status:Int
+    val id: String = "",
+    val productId: String = "",
+    val sellerId: String = "",
+    val buyerId: String = "",
+    val dealMethod: String = "",
+    val finalPrice: Double = 0.0,
+    val meetLocation: String = "",
+    val extraDetails: String = "",
+
+// Status Guardrails:
+// 0 = In Cart (Draft)
+// 1 = Pending Approval
+// 2 = Accepted
+// 3 = Rejected
+// 4 = Complete
+    val status: Int = 0
 
 )

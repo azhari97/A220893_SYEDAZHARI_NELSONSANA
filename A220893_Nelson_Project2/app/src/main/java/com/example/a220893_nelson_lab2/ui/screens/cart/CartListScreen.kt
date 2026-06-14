@@ -43,20 +43,11 @@ import com.example.a220893_nelson_lab2.data.viewmodels.UserViewModel
 
 @Composable
 fun CartListScreen(modifier: Modifier,navController: NavController,cartViewModel: CartViewModel,userViewModel: UserViewModel,productViewModel: ProductViewModel) {
-    val cartItems = cartViewModel.cartItems
+    val cartItems = cartViewModel.inCartItems.value
     var selectedTab by rememberSaveable {
         mutableIntStateOf(0)
     }
     val tabs = listOf("Current Cart")
-//    val filteredItems by remember(cartItems, selectedTab) {
-//        mutableStateOf(
-//            when (selectedTab) {
-//                0 -> cartItems.filter { it.status == 0 }
-//                1 -> cartItems.filter { it.status == 4 }
-//                else -> emptyList()
-//            }
-//        )
-//    }
     val filteredItems = cartItems
 
     Scaffold(
@@ -67,14 +58,6 @@ fun CartListScreen(modifier: Modifier,navController: NavController,cartViewModel
         Column(
             modifier = modifier.fillMaxSize().padding(top=50.dp)
         ) {
-//            Row( modifier = Modifier.fillMaxWidth(),
-//                horizontalArrangement = Arrangement.SpaceBetween,
-//            ) {
-////                SectionTitle("Cart Items")
-//            }
-//        Spacer(modifier= Modifier.padding(
-//            vertical = 12.dp
-//        ))
             TabRow(selectedTabIndex = selectedTab) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
@@ -111,7 +94,6 @@ fun CartListScreen(modifier: Modifier,navController: NavController,cartViewModel
 
                         CartItemCard(
                             cartItem = cartItem,
-                            navController = navController,
                             userViewModel = userViewModel,
                             productViewModel = productViewModel,
                             cartViewModel = cartViewModel,
@@ -129,18 +111,16 @@ fun CartListScreen(modifier: Modifier,navController: NavController,cartViewModel
         }
 
     }
-
 }
 
 @Composable
 fun CartItemCard(
     cartItem: CartItem,
-    navController: NavController,
     userViewModel: UserViewModel,
     productViewModel: ProductViewModel,
     cartViewModel: CartViewModel,
     modifier: Modifier = Modifier,
-    onStatusChange : (Int)->Unit
+    onStatusChange : (Int)->Unit // to change tabs, in cart and other than in cart status cartitems
 ) {
 
     var showDialog by remember {
@@ -561,18 +541,18 @@ fun CartItemCard(
                 confirmButton = {
                     Button(
                         onClick = {
-                            if (cartItem.status == 0) {
-                                cartViewModel.updateMeetLocation(
-                                    cartId = cartItem.id,
-                                    meetLocation = meetLocation,
-                                    extraDesc = extraDesc
-                                    )
-
-                                cartViewModel.randomizeOfferStatus(
-                                    cartItem.id,
-                                    cartItem
-                                )
-                            } else if (
+//                            if (cartItem.status == 0) {
+//                                cartViewModel.updateMeetLocation(
+//                                    cartId = cartItem.id,
+//                                    meetLocation = meetLocation,
+//                                    extraDesc = extraDesc
+//                                    )
+//                                cartViewModel.(
+//                                    cartItem.id,
+//                                    cartItem
+//                                )
+//                            }
+                            if (
                                 cartItem.status == 3
                             ) {
 

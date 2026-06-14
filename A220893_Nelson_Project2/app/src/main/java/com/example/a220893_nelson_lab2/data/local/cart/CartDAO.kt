@@ -14,6 +14,7 @@ interface CartDao {
     )
     suspend fun getCart():
             List<CartEntity>
+
     @Update
     suspend fun updateCart(
         cart: CartEntity
@@ -22,6 +23,4 @@ interface CartDao {
     suspend fun deleteCart(
         cart: CartEntity
     )
-
-
 }

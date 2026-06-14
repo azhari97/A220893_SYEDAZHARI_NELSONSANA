@@ -1,8 +1,11 @@
 package com.example.a220893_nelson_lab2.data.viewmodels
 
+import android.util.Log
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.a220893_nelson_lab2.data.repository.CartRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 data class CartItem(
@@ -24,117 +27,139 @@ data class CartItem(
     val status: Int = 0
 )
 
-class CartViewModel : ViewModel() {
-    private val _cartItem = mutableStateListOf<CartItem>(
-    )
+class CartViewModel(
+    private val repository: CartRepository = CartRepository()
+) : ViewModel() {
 
-    val cartItems: List<CartItem> = _cartItem
+    private val _cartItems = mutableStateListOf<CartItem>()
 
-    fun getCartItemById(id: Int): CartItem?{
-        return _cartItem.find{ it.id.equals(id)}
-    }
-    fun addToCart(
-        product: Product,
-        offeredPrice: Double
-    ) {
-        val finalPrice = if (product.transactionType == "Donate") {
-            0.0
-        } else {
-            offeredPrice
-        }
-        val newCartItem = CartItem(
-            id = _cartItem.size + 1,
-            itemId = product.id,
-            sellerId = product.ownerId,
-            buyerId = 0,
-            dealMethod = "Meetup",
-            paymentAttachmentUrl = "",
-            finalPrice = finalPrice,
-            meetLocation = "",
-            extraDetails = "",
-            status = 0
-        )
-
-        _cartItem.add(newCartItem)
+    val inCartItems = derivedStateOf {
+        _cartItems.filter { it.status == 0 }
     }
 
-    fun updateMeetLocation(
-        cartId: Int,
-        meetLocation: String,
-        extraDesc:String
-    ) {
+    val transactionItems = derivedStateOf {
+        _cartItems.filter { it.status > 0 }
+    }
 
-        val index = _cartItem.indexOfFirst {
-            it.id == cartId
+    fun loadCart(buyerEmail: String) {
+        viewModelScope.launch {
+            try {
+                val cloudItems = repository.getItems(buyerEmail)
+                _cartItems.clear()
+                _cartItems.addAll(cloudItems)
+            } catch (e: Exception) {
+                Log.e("CART_VM", "Error syncing cart listings", e)
+            }
         }
+    }
 
-        if (index != -1) {
-            _cartItem[index] = _cartItem[index].copy(
+    fun getCartItemById(id: String): CartItem? {
+        return _cartItems.find { it.id == id }
+    }
+
+    fun addToCart(product: Product, offeredPrice: Double, buyerEmail: String) {
+        viewModelScope.launch {
+            val finalPrice = if (product.transactionType == "Donate") 0.0 else offeredPrice
+
+            val newCartItem = CartItem(
+                id = "",
+                productId = product.id,
+                sellerId = product.ownerId,
+                buyerId = buyerEmail.lowercase().trim(),
+                dealMethod = "Meetup",
+                finalPrice = finalPrice,
+                status = 0
+            )
+            try {
+                repository.saveNewItem(newCartItem)
+                loadCart(buyerEmail)
+            } catch (e: Exception) {
+                Log.e("CART_VM", "Failed to add item to cart", e)
+            }
+        }
+    }
+
+    fun loadAllUserRelatedCarts(userEmail: String) {
+        viewModelScope.launch {
+            try {
+                val cleanedEmail = userEmail.lowercase().trim()
+                val cloudItems = repository.getItems(cleanedEmail)
+
+                _cartItems.clear()
+                _cartItems.addAll(cloudItems)
+            } catch (e: Exception) {
+                Log.e("CART_VM", "Error syncing cart listings", e)
+            }
+        }
+    }
+
+
+    fun updateMeetLocation(cartId: String, meetLocation: String, extraDesc: String, buyerEmail: String) {
+        viewModelScope.launch {
+            val matchedItem = _cartItems.find { it.id == cartId } ?: return@launch
+            val updatedItem = matchedItem.copy(
                 meetLocation = meetLocation,
                 extraDetails = extraDesc,
                 status = 1
             )
+            try {
+                repository.updateExistingItem(updatedItem)
+                loadCart(buyerEmail)
+            } catch (e: Exception) {
+                Log.e("CART_VM", "Update meeting info error", e)
+            }
         }
     }
-    fun randomizeOfferStatus(
-        cartId: Int,
-        cartItem: CartItem
-    ) {
 
+    fun updateOfferPrice(cartId: String, newPrice: Double, buyerEmail: String) {
         viewModelScope.launch {
-
-            delay(8000)
-
-            val index = _cartItem.indexOfFirst {
-                it.id == cartId
-            }
-
-            if (index != -1) {
-                var randomStatus = 2
-                if(cartItem.status != 3){
-                    randomStatus = listOf(2, 3).random()
-                }
-                _cartItem[index] = _cartItem[index].copy(
-                    status = randomStatus
-                )
+            val matchedItem = _cartItems.find { it.id == cartId } ?: return@launch
+            val updatedItem = matchedItem.copy(finalPrice = newPrice, status = 1)
+            try {
+                repository.updateExistingItem(updatedItem)
+                loadAllUserRelatedCarts(buyerEmail)
+            } catch (e: Exception) {
+                Log.e("CART_VM", "Price counter-offer failed", e)
             }
         }
     }
 
-    fun updateOfferPrice(
-        cartId: Int,
-        newPrice: Double,
-        cartItem: CartItem
-    ) {
-
-        val index = _cartItem.indexOfFirst {
-            it.id == cartId
-        }
-
-        if (index != -1) {
-
-            _cartItem[index] = _cartItem[index].copy(
-                finalPrice = newPrice,
-                status = 1
-            )
-
-            randomizeOfferStatus(cartId,cartItem)
+    fun completeTransaction(cartId: String, buyerEmail: String) {
+        viewModelScope.launch {
+            val matchedItem = _cartItems.find { it.id == cartId } ?: return@launch
+            val updatedItem = matchedItem.copy(status = 4)
+            try {
+                repository.updateExistingItem(updatedItem)
+                loadCart(buyerEmail)
+            } catch (e: Exception) {
+                Log.e("CART_VM", "Completion update failed", e)
+            }
         }
     }
 
-    fun completeTransaction(
-        cartId: Int
-    ) {
-
-        val index = _cartItem.indexOfFirst {
-            it.id == cartId
-        }
-
-        if (index != -1) {
-
-            _cartItem[index] = _cartItem[index].copy(
-                status = 4
-            )
+    //seller
+    fun getIncomingOffersForSeller(sellerEmail: String): List<CartItem> {
+        return _cartItems.filter {
+            it.sellerId.lowercase() == sellerEmail.lowercase().trim() && it.status == 1
         }
     }
+
+    fun respondToIncomingOffer(cartId: String, isAccepted: Boolean, userEmail: String) {
+        viewModelScope.launch {
+            val matchedItem = _cartItems.find { it.id == cartId } ?: return@launch
+
+            // Set explicit target status based on seller action
+            val targetStatus = if (isAccepted) 2 else 3
+            val updatedItem = matchedItem.copy(status = targetStatus)
+
+            try {
+                repository.updateExistingItem(updatedItem)
+                // Reload the system cache to immediately update both UI views
+                loadAllUserRelatedCarts(userEmail)
+            } catch (e: Exception) {
+                Log.e("CART_VM", "Seller response pipeline failed", e)
+            }
+        }
+    }
+
 }
