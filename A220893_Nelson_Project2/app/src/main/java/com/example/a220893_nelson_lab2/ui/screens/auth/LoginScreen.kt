@@ -1,6 +1,8 @@
 package com.example.a220893_nelson_lab2.ui.screens.auth
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,10 +32,14 @@ import androidx.compose.ui.unit.dp
 import com.example.a220893_nelson_lab2.R
 
 @Composable
-fun LoginScreen() {
-
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+fun LoginScreen(
+    errorMessage: String?,
+    onRegisterClick: (String, String) -> Unit,
+    onLoginClick: (String) -> Unit
+) {
+    var email by rememberSaveable { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
+    var isRegistering by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -43,7 +50,6 @@ fun LoginScreen() {
 
         Spacer(modifier = Modifier.height(60.dp))
 
-        // 🔷 Logo
         Image(
             painter = painterResource(R.drawable.justsharestufflogo),
             contentDescription = "App Logo",
@@ -52,7 +58,6 @@ fun LoginScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 🔷 Title
         Text(
             text = "JustShareStuff",
             style = typography.titleLarge
@@ -60,7 +65,20 @@ fun LoginScreen() {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // 🔷 Email Input
+        AnimatedVisibility(visible = isRegistering) {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    placeholder = { Text("Full Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -70,66 +88,56 @@ fun LoginScreen() {
             shape = RoundedCornerShape(12.dp)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 🔷 Password Input
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            placeholder = { Text("Password") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 🔷 Forgot Password
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
+        if (errorMessage != null) {
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Forgot Password?",
-                style = typography.bodySmall
+                text = errorMessage,
+                color = colorScheme.error,
+                style = typography.bodySmall,
+                modifier = Modifier.align(Alignment.Start)
             )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-
-        // 🔷 Login Button
         Button(
-            onClick = { },
+            onClick = {
+                if (email.isNotBlank()) {
+                    if (isRegistering) {
+                        if (name.isNotBlank()) {
+                            onRegisterClick(name, email)
+                        }
+                    } else {
+                        onLoginClick(email)
+                    }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("Login")
+            Text(if (isRegistering) "Sign Up" else "Login")
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // 🔷 Divider
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Divider(modifier = Modifier.weight(1f))
             Text(
-                text = "  OR  ",
-                style = typography.bodySmall
+                text = if (isRegistering) "Already have an account? " else "Don’t have an account? ",
+                style = typography.bodyMedium
             )
-            Divider(modifier = Modifier.weight(1f))
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 🔷 Sign Up Row
-        Row {
-            Text("Don’t have an account? ")
             Text(
-                text = "Sign Up",
-                color = colorScheme.primary
+                text = if (isRegistering) "Login" else "Sign Up",
+                color = colorScheme.primary,
+                style = typography.bodyMedium,
+                modifier = Modifier.clickable {
+                    isRegistering = !isRegistering
+                    // Clear fields out
+                    name = ""
+                    email = ""
+                }
             )
         }
     }

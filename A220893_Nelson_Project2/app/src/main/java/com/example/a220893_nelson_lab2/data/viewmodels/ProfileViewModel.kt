@@ -1,12 +1,12 @@
-package com.example.a220893_nelson_lab2.viewmodels
+package com.example.a220893_nelson_lab2.data.viewmodels
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 
 data class Profile(
-    var pImageUrl: String ="",
-    var name: String = "",
-    var email: String = ""
+    val pImageUrl: String ="",
+    val name: String = "",
+    val email: String = ""
 )
 
 class ProfileViewModel : ViewModel() {

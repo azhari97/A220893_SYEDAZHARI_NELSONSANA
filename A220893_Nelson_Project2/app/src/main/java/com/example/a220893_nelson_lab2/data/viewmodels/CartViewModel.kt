@@ -1,4 +1,4 @@
-package com.example.a220893_nelson_lab2.viewmodels
+package com.example.a220893_nelson_lab2.data.viewmodels
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
@@ -6,18 +6,23 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 data class CartItem(
-    val id: Int,
-    val itemId:Int,
-    val sellerId:Int,
-    val dealMethod:String,
-    val paymentAttachmentUrl:String,
-    val shipFee:Double,
-//    val offeredPrice: Double,
-    val finalPrice: Double,
-    val meetLocation:String,
-    val extraDetails:String,
-    val status:Int, // befPurchase,pending,accept,reject,complete
-    )
+    val id: String = "",
+    val productId: String = "",
+    val sellerId: String = "",
+    val buyerId: String = "",
+    val dealMethod: String = "",
+    val finalPrice: Double = 0.0,
+    val meetLocation: String = "",
+    val extraDetails: String = "",
+
+    // Status Guardrails:
+    // 0 = In Cart (Draft)
+    // 1 = Pending Approval
+    // 2 = Accepted
+    // 3 = Rejected
+    // 4 = Complete
+    val status: Int = 0
+)
 
 class CartViewModel : ViewModel() {
     private val _cartItem = mutableStateListOf<CartItem>(
@@ -26,7 +31,7 @@ class CartViewModel : ViewModel() {
     val cartItems: List<CartItem> = _cartItem
 
     fun getCartItemById(id: Int): CartItem?{
-        return _cartItem.find{ it.id == id}
+        return _cartItem.find{ it.id.equals(id)}
     }
     fun addToCart(
         product: Product,
@@ -41,9 +46,9 @@ class CartViewModel : ViewModel() {
             id = _cartItem.size + 1,
             itemId = product.id,
             sellerId = product.ownerId,
+            buyerId = 0,
             dealMethod = "Meetup",
             paymentAttachmentUrl = "",
-            shipFee = 0.0,
             finalPrice = finalPrice,
             meetLocation = "",
             extraDetails = "",
@@ -132,5 +137,4 @@ class CartViewModel : ViewModel() {
             )
         }
     }
-
 }

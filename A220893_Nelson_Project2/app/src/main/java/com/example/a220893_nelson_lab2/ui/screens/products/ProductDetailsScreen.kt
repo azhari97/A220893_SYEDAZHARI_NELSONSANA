@@ -1,22 +1,19 @@
 package com.example.a220893_nelson_lab2.ui.screens.products
 
-import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.a220893_nelson_lab2.ui.screens.navigation.*
-import com.example.a220893_nelson_lab2.viewmodels.ProductViewModel
+import com.example.a220893_nelson_lab2.data.viewmodels.ProductViewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Image
 import androidx.compose.material3.*
-import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,7 +21,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
@@ -33,22 +29,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.a220893_nelson_lab2.R
-import com.example.a220893_nelson_lab2.ui.theme.errorLight
-import com.example.a220893_nelson_lab2.viewmodels.CartViewModel
-import com.example.a220893_nelson_lab2.viewmodels.UserViewModel
+import com.example.a220893_nelson_lab2.data.viewmodels.CartViewModel
+import com.example.a220893_nelson_lab2.data.viewmodels.UserViewModel
 
 
 @Composable
-fun ProductDetailsScreen(
+fun     ProductDetailsScreen(
     navController: NavController,
     viewModel: ProductViewModel,
     cartViewModel: CartViewModel,
     userViewModel: UserViewModel,
-    productId: Int
+    productId: String
 ) {
 
     val product = viewModel.getProductById(productId)
@@ -66,7 +58,7 @@ fun ProductDetailsScreen(
                 mutableStateOf(prod.price.toString())
             }
 
-            val owner = userViewModel.getUser(prod.ownerId)
+            val seller = userViewModel.getUser(prod.ownerId)
 
             Column(
                 modifier = Modifier
@@ -171,7 +163,7 @@ fun ProductDetailsScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Seller Section
-                owner?.let { something ->
+                seller?.let { something ->
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),

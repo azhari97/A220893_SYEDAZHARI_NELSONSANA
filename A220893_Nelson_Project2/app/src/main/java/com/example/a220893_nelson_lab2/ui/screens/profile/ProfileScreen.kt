@@ -1,6 +1,6 @@
 package com.example.a220893_nelson_lab2.ui.screens.profile
 
-import com.example.a220893_nelson_lab2.viewmodels.ProfileViewModel
+import com.example.a220893_nelson_lab2.data.viewmodels.ProfileViewModel
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +24,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +37,6 @@ import com.example.a220893_nelson_lab2.R
 import com.example.a220893_nelson_lab2.ui.components.sectiontitle.*
 import com.example.a220893_nelson_lab2.ui.screens.navigation.TopBar
 import com.example.a220893_nelson_lab2.ui.theme.errorLight
-import kotlin.text.ifEmpty
 
 @Composable
 fun ProfileScreen(navController: NavController, viewModel: ProfileViewModel) {
@@ -46,10 +45,10 @@ fun ProfileScreen(navController: NavController, viewModel: ProfileViewModel) {
         topBar = { TopBar() }
     ) {
         paddingValues ->
-        val pad = paddingValues
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(paddingValues)
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -96,11 +95,13 @@ fun ProfileScreen(navController: NavController, viewModel: ProfileViewModel) {
     }
 
 }
+
 @Composable
 fun EditProfileScreen(navController: NavController, viewModel: ProfileViewModel) {
     val profile = viewModel.profile.value
-//    var name by remember { mutableStateOf(editProfile.name) }
-//    var email by remember { mutableStateOf(editProfile.email) }
+    var name by rememberSaveable { mutableStateOf(profile.name) }
+    var email by rememberSaveable { mutableStateOf(profile.email) }
+
     Column(modifier = Modifier
         .padding(12.dp)
         .fillMaxSize(),
@@ -108,18 +109,18 @@ fun EditProfileScreen(navController: NavController, viewModel: ProfileViewModel)
         verticalArrangement = Arrangement.Center){
         SectionTitle("Edit Profile")
         TextField(
-            value = profile.name,
-            onValueChange = { profile.name = it },
+            value = name,
+            onValueChange = { name = it },
             label = { Text("Name") }
         )
         Spacer(Modifier.padding(12.dp))
         TextField(
-            value = profile.email,
-            onValueChange = { profile.email = it },
+            value = email,
+            onValueChange = { email = it },
             label = { Text("Email") }
         )
         Spacer(Modifier.padding(12.dp))
-        Row() {
+        Row {
             Button(onClick = {
                 navController.popBackStack()
             },
@@ -128,7 +129,7 @@ fun EditProfileScreen(navController: NavController, viewModel: ProfileViewModel)
                 Text("Cancel")
             }
             Button(onClick = {
-                viewModel.updateProfile(profile.name, profile.email)
+                viewModel.updateProfile(name, email)
                 navController.popBackStack()
             }) {
                 Text("Save Profile")
