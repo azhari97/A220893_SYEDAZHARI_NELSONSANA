@@ -27,12 +27,12 @@ import com.example.a220893_nelson_lab2.ui.screens.news.TrendingNewsCarousel
 
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier,navController: NavController,productViewModel: ProductViewModel,newsViewModel: NewsViewModel) {
-    var searchText by rememberSaveable() { mutableStateOf("") }
+    var searchText by rememberSaveable { mutableStateOf("") }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val news = newsViewModel.getArticles();
     Scaffold(
         topBar = {
-            TopBar()
+            TopBar(navController)
         },
     ) { paddingValues ->
         LazyColumn(
@@ -56,7 +56,11 @@ fun HomeScreen(modifier: Modifier = Modifier,navController: NavController,produc
                     searchText = searchText,
                     onSearchChange = { searchText = it },
                     onSearchClick = {
-                        searchQuery = searchText // trigger filtering
+                        searchQuery = searchText
+                    },
+                    onClearClick = {
+                        searchText = ""
+                        searchQuery = ""
                     }
                 )
             }

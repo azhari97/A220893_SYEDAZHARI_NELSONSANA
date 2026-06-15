@@ -17,14 +17,14 @@ import coil.compose.AsyncImage
 import com.example.a220893_nelson_lab2.data.viewmodels.Article
 import com.example.a220893_nelson_lab2.data.viewmodels.NewsUiState
 import com.example.a220893_nelson_lab2.data.viewmodels.NewsViewModel
-import com.example.a220893_nelson_lab2.ui.screens.navigation.TopBarGoBack
 import com.example.a220893_nelson_lab2.R
+import com.example.a220893_nelson_lab2.ui.screens.navigation.TopBar
 
 @Composable
 fun NewsScreen(newsViewModel: NewsViewModel,navController: NavController) {
     Scaffold(
         topBar = {
-            TopBarGoBack(navController = navController)
+            TopBar(navController = navController,true)
         }
     ) { paddingValues ->
         Box(modifier = Modifier
@@ -74,6 +74,7 @@ fun ArticleCard(
             if (!article.image.isNullOrEmpty()) {
                 AsyncImage(
                     model = article.image,
+                    error =  painterResource(R.drawable.justsharestufflogonews),
                     contentDescription = "News thumbnail for ${article.title}",
                     modifier = Modifier
                         .fillMaxWidth()

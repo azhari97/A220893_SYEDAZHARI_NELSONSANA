@@ -4,7 +4,6 @@ import com.example.a220893_nelson_lab2.ui.screens.home.*
 import com.example.a220893_nelson_lab2.ui.screens.profile.*
 import com.example.a220893_nelson_lab2.ui.screens.products.*
 //viewmodels
-import com.example.a220893_nelson_lab2.data.viewmodels.ProfileViewModel
 import com.example.a220893_nelson_lab2.data.viewmodels.NavViewModel
 
 //lib
@@ -36,6 +35,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.a220893_nelson_lab2.ui.screens.cart.CartListScreen
 import com.example.a220893_nelson_lab2.data.viewmodels.CartViewModel
 import com.example.a220893_nelson_lab2.data.viewmodels.NewsViewModel
@@ -43,26 +44,51 @@ import com.example.a220893_nelson_lab2.data.viewmodels.ProductViewModel
 import com.example.a220893_nelson_lab2.data.viewmodels.UserViewModel
 import com.example.a220893_nelson_lab2.ui.screens.auth.LoginScreen
 import com.example.a220893_nelson_lab2.ui.screens.news.NewsScreen
+import com.example.a220893_nelson_lab2.JSSApplication
+import com.example.a220893_nelson_lab2.R
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: UserViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContent {
             AppTheme {
-                val user = viewModel.currentUser.value
+                val app = application as JSSApplication
+                val userViewModel: UserViewModel = viewModel(
+                    factory = viewModelFactory {
+                        initializer {
+                            UserViewModel(app.userRepository)
+                        }
+                    }
+                )
+                val productViewModel: ProductViewModel = viewModel(
+                    factory = viewModelFactory {
+                        initializer {
+                            ProductViewModel(app.productRepository)
+                        }
+                    }
+                )
+                val cartViewModel: CartViewModel = viewModel(
+                    factory = viewModelFactory {
+                        initializer {
+                            CartViewModel(app.cartRepository, app.productRepository)
+                        }
+                    }
+                )
+
+                val user = userViewModel.currentUser.value
                 if (user == null) {
                     LoginScreen(
-                        errorMessage = viewModel.errorMessage.value,
-                        onRegisterClick = { name, email -> viewModel.register(name, email) },
-                        onLoginClick = { email -> viewModel.login(email) }
+                        userViewModel.errorMessage.value,
+                        onRegisterClick = { name, email -> userViewModel.register(name, email) },
+                        onLoginClick = { email -> userViewModel.login(email) }
                     )
                 } else {
                     MainScreen(
-                        userViewModel = viewModel,
-                        onLogoutClick = { viewModel.logout() },
+                        userViewModel,
+                        productViewModel,
+                        cartViewModel
                     )
                 }
             }
@@ -78,13 +104,12 @@ fun currentRoute(navController: NavController): String? {
 @Composable
 fun MainScreen(
     userViewModel: UserViewModel,
-    onLogoutClick: () -> Unit) {
+    productViewModel: ProductViewModel,
+    cartViewModel: CartViewModel
+) {
+//    onLogoutClick: () -> Unit) {
     val navController = rememberNavController()
-    val viewModel: ProfileViewModel = viewModel()
     val navViewModel: NavViewModel = viewModel()
-    val cartViewModel: CartViewModel = viewModel()
-//    val userViewModel: UserViewModel = viewModel()
-    val productViewModel: ProductViewModel = viewModel()
     val newsViewModel: NewsViewModel = viewModel()
     val navItems = navViewModel.navItems
 
@@ -114,10 +139,23 @@ fun MainScreen(
                 navController = navController,
                 startDestination = "home",
             ) {
-                composable("home") { HomeScreen(Modifier,navController,productViewModel,newsViewModel) }
-                composable("home/news") { NewsScreen(newsViewModel,navController) }
-                composable("explore") { ExploreScreen(Modifier,productViewModel,userViewModel,navController) }
-                composable("explore/productdetails/{id}") { backStackEntry ->
+                composable("home") {
+                    HomeScreen(
+                        Modifier,
+                        navController,
+                        productViewModel,
+                        newsViewModel
+                    )
+                }
+                composable("home/news") { NewsScreen(newsViewModel, navController) }
+                composable("explore") {
+                    ExploreScreen(
+                        Modifier,
+                        productViewModel,
+                        navController
+                    )
+                }
+                composable("productdetails/{id}") { backStackEntry ->
                     val productId =
                         backStackEntry.arguments?.getString("id")
                     ProductDetailsScreen(
@@ -128,69 +166,85 @@ fun MainScreen(
                         userViewModel = userViewModel
                     )
                 }
-                composable("explore/addproduct") {AddProductScreen(productViewModel, userViewModel,navController) }
-                composable("profile") {
-                    ProfileScreen(navController, viewModel)
-                }
-                composable("cart") { CartListScreen(Modifier,navController,cartViewModel, userViewModel, productViewModel) }
-                composable("editprofile") {
-                    EditProfileScreen(navController, viewModel)
-                }
-            }
-        }
-    }
-}
-@Composable
-fun NewsCarouselSimple() {
-
-    val newsList = listOf(
-        R.drawable.justsharestufflogonews,
-        R.drawable.justsharestufflogonews,
-        R.drawable.justsharestufflogonews,
-    )
-
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp)
-        ) {
-
-            newsList.forEach { imageRes ->
-
-                Card(
-                    modifier = Modifier
-                        .padding(end = 12.dp)
-                        .width(280.dp)
-                        .height(160.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Image(
-                        painter = painterResource(imageRes),
-                        contentDescription = "News",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                composable("addproduct") {
+                    AddProductScreen(
+                        productViewModel,
+                        userViewModel,
+                        navController
                     )
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Optional simple indicator (static)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            repeat(newsList.size) {
-                Box(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .size(8.dp)
-                        .clip(CircleShape)
-                )
+                composable("profile") {
+                    ProfileScreen(navController, userViewModel)
+                }
+                composable("cart") {
+                    CartListScreen(
+                        Modifier,
+                        navController,
+                        cartViewModel,
+                        userViewModel,
+                        productViewModel
+                    )
+                }
+                composable("editprofile") {
+                    EditProfileScreen(navController, userViewModel)
+                }
             }
         }
     }
 }
+//}
+
+//@Composable
+//fun NewsCarouselSimple() {
+//
+//    val newsList = listOf(
+//        R.drawable.justsharestufflogonews,
+//        R.drawable.justsharestufflogonews,
+//        R.drawable.justsharestufflogonews,
+//    )
+//
+//    Column {
+//        Row(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .horizontalScroll(rememberScrollState())
+//                .padding(horizontal = 12.dp)
+//        ) {
+//
+//            newsList.forEach { imageRes ->
+//
+//                Card(
+//                    modifier = Modifier
+//                        .padding(end = 12.dp)
+//                        .width(280.dp)
+//                        .height(160.dp),
+//                    shape = RoundedCornerShape(12.dp)
+//                ) {
+//                    Image(
+//                        painter = painterResource(imageRes),
+//                        contentDescription = "News",
+//                        contentScale = ContentScale.Crop,
+//                        modifier = Modifier.fillMaxSize()
+//                    )
+//                }
+//            }
+//        }
+//
+//        Spacer(modifier = Modifier.height(8.dp))
+//
+//        // Optional simple indicator (static)
+//        Row(
+//            modifier = Modifier.fillMaxWidth(),
+//            horizontalArrangement = Arrangement.Center
+//        ) {
+//            repeat(newsList.size) {
+//                Box(
+//                    modifier = Modifier
+//                        .padding(4.dp)
+//                        .size(8.dp)
+//                        .clip(CircleShape)
+//                )
+//            }
+//        }
+//    }
+//}

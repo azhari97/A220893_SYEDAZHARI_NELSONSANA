@@ -31,8 +31,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import coil.compose.AsyncImage
 import com.example.a220893_nelson_lab2.ui.components.emptyState.EmptyState1
 import com.example.a220893_nelson_lab2.ui.components.inforow.InfoRow
 import com.example.a220893_nelson_lab2.ui.components.sectiontitle.SectionTitle
@@ -40,58 +42,68 @@ import com.example.a220893_nelson_lab2.ui.screens.navigation.TopBar
 import com.example.a220893_nelson_lab2.data.viewmodels.CartItem
 import com.example.a220893_nelson_lab2.data.viewmodels.ProductViewModel
 import com.example.a220893_nelson_lab2.data.viewmodels.UserViewModel
+import com.example.a220893_nelson_lab2.R
+
 
 @Composable
-fun CartListScreen(modifier: Modifier,navController: NavController,cartViewModel: CartViewModel,userViewModel: UserViewModel,productViewModel: ProductViewModel) {
-    val cartItems = cartViewModel.inCartItems.value
-    var selectedTab by rememberSaveable {
-        mutableIntStateOf(0)
+fun CartListScreen(
+    modifier: Modifier,
+    navController: NavController,
+    cartViewModel: CartViewModel,
+    userViewModel: UserViewModel,
+    productViewModel: ProductViewModel
+) {
+    val currentUserEmail = userViewModel.currentUser.value?.email ?: ""
+
+    LaunchedEffect(currentUserEmail) {
+        if (currentUserEmail.isNotBlank()) {
+            cartViewModel.loadAllUserRelatedCarts(currentUserEmail)
+        }
     }
-    val tabs = listOf("Current Cart")
-    val filteredItems = cartItems
+
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    val tabs = listOf("Current Cart", "Offers & History")
+    val filteredItems = when (selectedTab) {
+        0 -> cartViewModel.inCartItems.value
+        1 -> cartViewModel.transactionItems.value
+        else -> emptyList()
+    }
 
     Scaffold(
-        topBar = { TopBar()}
+        topBar = { TopBar(navController) }
     ) { paddingValues ->
-        val pad = paddingValues
-
         Column(
-            modifier = modifier.fillMaxSize().padding(top=50.dp)
+            modifier = modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
             TabRow(selectedTabIndex = selectedTab) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTab == index,
-                        onClick = {
-                            selectedTab = index
-                        },
-                        text = {
-                            Text(text = title)
-                        }
+                        onClick = { selectedTab = index },
+                        text = { Text(text = title) }
                     )
                 }
             }
-            if (filteredItems.isEmpty()) {
 
+            if (filteredItems.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     EmptyState1(
-                        message = "Cart is empty",
+                        message = if (selectedTab == 0) "Your cart is empty" else "No order history found",
                         icon = Icons.Default.ShoppingCart
                     )
                 }
-
-            }
-            else {
+            } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(1),
                     contentPadding = PaddingValues(12.dp),
-                    modifier = modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    items(cartItems) { cartItem ->
-
+                    items(filteredItems) { cartItem ->
                         CartItemCard(
                             cartItem = cartItem,
                             userViewModel = userViewModel,
@@ -99,9 +111,8 @@ fun CartListScreen(modifier: Modifier,navController: NavController,cartViewModel
                             cartViewModel = cartViewModel,
                             onStatusChange = { newStatus ->
                                 selectedTab = when (newStatus) {
-                                    1, 2, 3 -> 0
-                                    4 -> 1
-                                    else -> 0
+                                    0 -> 0
+                                    else -> 1
                                 }
                             }
                         )
@@ -109,7 +120,6 @@ fun CartListScreen(modifier: Modifier,navController: NavController,cartViewModel
                 }
             }
         }
-
     }
 }
 
@@ -120,484 +130,286 @@ fun CartItemCard(
     productViewModel: ProductViewModel,
     cartViewModel: CartViewModel,
     modifier: Modifier = Modifier,
-    onStatusChange : (Int)->Unit // to change tabs, in cart and other than in cart status cartitems
+    onStatusChange: (Int) -> Unit
 ) {
+    var showDialog by remember { mutableStateOf(false) }
 
-    var showDialog by remember {
-        mutableStateOf(false)
-    }
+    var meetLocation by rememberSaveable { mutableStateOf(cartItem.meetLocation) }
+    var extraDesc by rememberSaveable { mutableStateOf(cartItem.extraDetails) }
+    var offerPrice by rememberSaveable { mutableStateOf(cartItem.finalPrice.toString()) }
 
-    var meetLocation by rememberSaveable {
-        mutableStateOf(cartItem.meetLocation)
-    }
-    var extraDesc by rememberSaveable {
-        mutableStateOf(cartItem.extraDetails)
-    }
+    val currentUserEmail = userViewModel.currentUser.value?.email ?: ""
 
-    var shippingFee by rememberSaveable {
-        mutableStateOf(cartItem.shipFee.toString())
-    }
-    var offerPrice by rememberSaveable {
-        mutableStateOf(cartItem.finalPrice.toString())
-    }
+    val isSeller = currentUserEmail.lowercase().trim() == cartItem.sellerId.lowercase().trim()
+    val product = productViewModel.getProductById(cartItem.productId)
+    val sellerInfoId = if (isSeller) cartItem.buyerId else cartItem.sellerId
 
-    var seller = userViewModel.getUser(cartItem.sellerId)
-    val product = productViewModel.getProductById(cartItem.itemId)
-    val context = LocalContext.current
-
-        Card(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(8.dp)
-                .clickable {
-                    showDialog = true
-                },
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            ),
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = 6.dp
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(18.dp)
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .clickable { showDialog = true },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-
-                    Column {
-
-                        Text(
-                            text = "Cart #${cartItem.id}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-                        product?.let { prod ->
-                            Text(
-                                text = prod.name,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-
-                    AssistChip(
-                        onClick = {
-
-                        },
-                        label = {
-                            Text(
-                                when (cartItem.status) {
-                                    0 -> "In Cart"
-                                    1 -> "Awaiting Seller"
-                                    2 -> "Accepted"
-                                    3 -> "Rejected"
-                                    else -> "Completed"
-                                }
-                            )
-                        }
+                Column {
+                    Text(
+                        text = if (isSeller) "Incoming Offer" else "My Purchase Request",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary
                     )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                HorizontalDivider()
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-
-                    Column {
-
+                    // Safe Check for Product Name
+                    if (product != null) {
                         Text(
-                            text = "Deal Method",
-                            style = MaterialTheme.typography.labelSmall
-                        )
-
-                        Text(
-                            text = if (cartItem.dealMethod.isEmpty())
-                                "Not Set"
-                            else
-                                cartItem.dealMethod
-                        )
-                    }
-
-                    Column(
-                        horizontalAlignment = Alignment.End
-                    ) {
-
-                        Text(
-                            text = "Price",
-                            style = MaterialTheme.typography.labelSmall
-                        )
-
-                        Text(
-                            text = "RM ${cartItem.finalPrice}",
+                            text = product.name,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
+                    } else {
+                        Text(
+                            text = "Loading Product Details...",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.outline
+                        )
                     }
+                }
+                AssistChip(
+                    onClick = { },
+                    label = {
+                        Text(
+                            when (cartItem.status) {
+                                0 -> "In Cart"
+                                1 -> "Awaiting Seller"
+                                2 -> "Accepted"
+                                3 -> "Rejected"
+                                else -> "Completed"
+                            }
+                        )
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(text = if (isSeller) "Buyer" else "Seller", style = MaterialTheme.typography.labelSmall)
+                    Text(text = sellerInfoId, style = MaterialTheme.typography.bodyMedium)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(text = "Offer Price", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        text = "RM ${cartItem.finalPrice}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
-        // Dialog Popup
-        if (showDialog) {
-            AlertDialog(
-                onDismissRequest = {
-                    showDialog = false
-                },
+    }
 
-                title = {
-                    Text("Cart Details")
-                },
-
-                text = {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(1){
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                                ),
-                                shape = RoundedCornerShape(28.dp),
-                                elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 6.dp
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                    Image(
-                                        painter = painterResource(
-                                            id = productViewModel.getImageResId(context,product?.imgUrl.toString())
-                                        ),
-                                        contentDescription = product?.name,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(220.dp)
-                                            .padding(16.dp)
-                                    )
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(product?.name ?: "Offer Details") },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                            shape = RoundedCornerShape(28.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (product != null && product.imgUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = product.imgUrl,
+                                    error = painterResource(R.drawable.justsharestufflogo),
+                                    contentDescription = "Thumbnail for ${product.name}",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(240.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(R.drawable.justsharestufflogo),
+                                    contentDescription = "Fallback Logo",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(240.dp),
+                                    contentScale = ContentScale.Crop
+                                )
                             }
-                            Spacer(modifier=Modifier.height(12.dp))
-                            // Cart Information
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                                ),
-                                shape = RoundedCornerShape(20.dp)
+                        }
+                    }
+
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
+                                Text(text = "Offer Details", style = MaterialTheme.typography.titleSmall)
+                                HorizontalDivider()
 
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        SectionTitle("Cart Information")
-                                        AssistChip(
-                                            onClick = { },
-                                            label = {
-
-                                                Text(
-                                                    when (cartItem.status) {
-                                                        0 -> "In Cart"
-                                                        1 -> "Awaiting Seller"
-                                                        2 -> "Accepted"
-                                                        3 -> "Rejected"
-                                                        else -> "Completed"
-                                                    }
-                                                )
-                                            }
-                                        )
-                                    }
-                                    HorizontalDivider()
-                                    product?.let { prod ->
-                                        InfoRow(
-                                            title = "Item Name",
-                                            value = prod.name
-                                        )
-                                        InfoRow(
-                                            title = "Item Type",
-                                            value = prod.type
-                                        )
-                                        InfoRow(
-                                            title = "Item Condition",
-                                            value = prod.condition
-                                        )
-                                    }
-                                    if (cartItem.status == 0) {
-                                        InfoRow(
-                                            title = "Offered Price",
-                                            value = "RM ${cartItem.finalPrice}"
-                                        )
-
+                                when (cartItem.status) {
+                                    0 -> {
                                         OutlinedTextField(
                                             value = meetLocation,
-                                            onValueChange = {
-                                                meetLocation = it
-                                            },
-                                            label = {
-                                                Text("Meet Location")
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = RoundedCornerShape(14.dp)
+                                            onValueChange = { meetLocation = it },
+                                            label = { Text("Meet Location") },
+                                            modifier = Modifier.fillMaxWidth()
                                         )
-
                                         OutlinedTextField(
                                             value = extraDesc,
-                                            onValueChange = {
-                                                extraDesc = it
-                                            },
-                                            label = {
-                                                Text("Meetup Details")
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = RoundedCornerShape(14.dp)
+                                            onValueChange = { extraDesc = it },
+                                            label = { Text("Meetup Details") },
+                                            modifier = Modifier.fillMaxWidth()
                                         )
+                                    }
+                                    1 -> {
+                                        Text("Location: ${cartItem.meetLocation}", style = MaterialTheme.typography.bodyMedium)
+                                        Text("Details: ${cartItem.extraDetails}", style = MaterialTheme.typography.bodyMedium)
 
                                         Surface(
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = MaterialTheme.colorScheme.secondaryContainer
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = if (isSeller) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
-
                                             Text(
-                                                text = "Please fill in meetup details before finalizing your offer.",
+                                                text = if (isSeller) "Review the details below before accepting." else "Waiting for seller approval.",
                                                 modifier = Modifier.padding(12.dp),
                                                 style = MaterialTheme.typography.bodySmall
                                             )
                                         }
                                     }
-
-                                    // STATUS 3
-                                    if (cartItem.status == 3) {
-
+                                    2 -> {
+                                        Text("Location: ${cartItem.meetLocation}")
+                                        Text("Details: ${cartItem.extraDetails}")
                                         Surface(
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = MaterialTheme.colorScheme.errorContainer
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
-
                                             Text(
-                                                text = "Your previous offer was rejected.",
-                                                modifier = Modifier.padding(12.dp),
-                                                color = MaterialTheme.colorScheme.onErrorContainer
-                                            )
-                                        }
-
-                                        OutlinedTextField(
-                                            value = offerPrice,
-                                            onValueChange = {
-                                                offerPrice = it
-                                            },
-                                            label = {
-                                                Text("Update Offer Price")
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = RoundedCornerShape(14.dp)
-                                        )
-                                    }
-
-                                    // STATUS 1
-                                    if (cartItem.status == 1) {
-
-                                        InfoRow(
-                                            title = "Meetup Location",
-                                            value = cartItem.meetLocation
-                                        )
-
-                                        InfoRow(
-                                            title = "Meetup Details",
-                                            value = cartItem.extraDetails
-                                        )
-
-                                        InfoRow(
-                                            title = "Offer Price",
-                                            value = "RM ${cartItem.finalPrice}"
-                                        )
-
-                                        Surface(
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = MaterialTheme.colorScheme.secondaryContainer
-                                        ) {
-
-                                            Text(
-                                                text = "Waiting for seller approval.",
+                                                text = if (isSeller) "Waiting for buyer to close transaction after meetup." else "Offer accepted! Meet up and click Complete below.",
                                                 modifier = Modifier.padding(12.dp)
                                             )
                                         }
                                     }
-
-                                    // STATUS 2
-                                    if (cartItem.status == 2) {
-
-                                        InfoRow(
-                                            title = "Meetup Location",
-                                            value = cartItem.meetLocation
-                                        )
-
-                                        InfoRow(
-                                            title = "Meetup Details",
-                                            value = cartItem.extraDetails
-                                        )
-
-                                        InfoRow(
-                                            title = "Accepted Price",
-                                            value = "RM ${cartItem.finalPrice}"
-                                        )
-
+                                    3 -> {
                                         Surface(
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = MaterialTheme.colorScheme.primaryContainer
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = MaterialTheme.colorScheme.errorContainer,
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
-
                                             Text(
-                                                text = "Seller accepted your offer. Complete transaction after meetup.",
+                                                text = if (isSeller) "You rejected this offer." else "Your offer was rejected. Adjust price below to re-submit.",
                                                 modifier = Modifier.padding(12.dp),
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                color = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                        }
+                                        if (!isSeller) {
+                                            OutlinedTextField(
+                                                value = offerPrice,
+                                                onValueChange = { offerPrice = it },
+                                                label = { Text("New Offer Price (RM)") },
+                                                modifier = Modifier.fillMaxWidth()
                                             )
                                         }
                                     }
-
-                                    // STATUS 4
-                                    if (cartItem.status == 4) {
-
-                                        InfoRow(
-                                            title = "Meetup Location",
-                                            value = cartItem.meetLocation
-                                        )
-
-                                        InfoRow(
-                                            title = "Meetup Details",
-                                            value = cartItem.extraDetails
-                                        )
-
-                                        InfoRow(
-                                            title = "Price Paid",
-                                            value = "RM ${cartItem.finalPrice}"
-                                        )
-
-                                        Surface(
-                                            shape = RoundedCornerShape(14.dp),
-                                            color = MaterialTheme.colorScheme.tertiaryContainer
-                                        ) {
-
-                                            Text(
-                                                text = "Transaction Completed Successfully",
-                                                modifier = Modifier.padding(12.dp),
-                                                color = MaterialTheme.colorScheme.onTertiaryContainer
-                                            )
+                                    4 -> {
+                                        Text("Location: ${cartItem.meetLocation}")
+                                        Text("Finalized Price: RM ${cartItem.finalPrice}")
+                                        Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth()) {
+                                            Text(text = "Transaction Complete", modifier = Modifier.padding(12.dp))
                                         }
                                     }
                                 }
                             }
-                            Spacer(modifier=Modifier.height(12.dp))
-                            // Seller Section
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                                ),
-                                shape = RoundedCornerShape(20.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-
-                                Column(
-                                    modifier = Modifier.padding(16.dp)
-                                ) {
-
-                                    Text("Seller Information")
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Text(
-                                        text = seller?.name ?: "Unknown Seller",
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "${seller?.email}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (isSeller && cartItem.status == 1) {
+                    Row {
+                        TextButton(
+                            onClick = {
+                                cartViewModel.respondToIncomingOffer(cartItem.id, isAccepted = false, currentUserEmail)
+                                showDialog = false
+                            },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Reject Offer")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                cartViewModel.respondToIncomingOffer(cartItem.id, isAccepted = true, currentUserEmail)
+                                showDialog = false
                             }
+                        ) {
+                            Text("Accept Offer")
                         }
-                        }
+                    }
+                } else {
+                    val buttonText = when (cartItem.status) {
+                        0 -> "Submit Offer"
+                        2 -> if (!isSeller) "Complete Transaction" else "Close"
+                        3 -> "Retry Offer"
+                        else -> "Close"
+                    }
 
-
-
-                },
-                confirmButton = {
                     Button(
                         onClick = {
-//                            if (cartItem.status == 0) {
-//                                cartViewModel.updateMeetLocation(
-//                                    cartId = cartItem.id,
-//                                    meetLocation = meetLocation,
-//                                    extraDesc = extraDesc
-//                                    )
-//                                cartViewModel.(
-//                                    cartItem.id,
-//                                    cartItem
-//                                )
-//                            }
-                            if (
-                                cartItem.status == 3
-                            ) {
-
-                                if (offerPrice.isNotEmpty()) {
-                                    cartViewModel.updateOfferPrice(
-                                        cartId = cartItem.id,
-                                        newPrice = offerPrice.toDouble(),
-                                        cartItem
+                            when (cartItem.status) {
+                                0 -> {
+                                    cartViewModel.updateMeetLocation(
+                                        cartItem.id,
+                                        meetLocation,
+                                        extraDesc,
+                                        currentUserEmail
                                     )
+                                    onStatusChange(1)
                                 }
-
-                            } else if (cartItem.status == 2) {
-                                cartViewModel.completeTransaction(
-                                    cartItem.id
-                                )
-//                                onStatusChange(4)
+                                3 -> if (offerPrice.isNotEmpty()) cartViewModel.updateOfferPrice(cartItem.id, offerPrice.toDouble(), currentUserEmail)
+                                2 -> if (!isSeller) cartViewModel.completeTransaction(cartItem.id, currentUserEmail)
                             }
                             showDialog = false
                         }
                     ) {
-
-                        Text(
-                            when (cartItem.status) {
-                                0 -> "Submit"
-//                                1 -> "Update Offer"
-                                2 -> "Complete Transactions"
-                                3 -> "Retry Offer"
-//                                4 -> "Complete"
-                                else -> "Close"
-                            }
-                        )
-                    }
-                },
-                dismissButton = {
-                    if (cartItem.status in listOf(0,2,3)) {
-                        TextButton(
-                            onClick = {
-                                showDialog = false
-                            }
-                        ) {
-                            Text("Cancel")
-                        }
+                        Text(buttonText)
                     }
                 }
-            )
-        }
-
+            },
+            dismissButton = {
+                if (!(cartItem.status == 2 && !isSeller)) {
+                    TextButton(onClick = { showDialog = false }) {
+                        Text("Close")
+                    }
+                }
+            }
+        )
+    }
 }

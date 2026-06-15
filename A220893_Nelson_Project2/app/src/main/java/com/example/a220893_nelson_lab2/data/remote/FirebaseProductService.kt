@@ -22,7 +22,19 @@ class FirebaseProductService {
         }
     }
 
-    suspend fun uploadProduct(product: Product) {
+    suspend fun getOne(id: String): Product? {
+        return try {
+            val snapshot = productCollection.document(id).get().await()
+            val product = snapshot.toObject(Product::class.java)
+
+            // Check if the product exists
+            if (product != null && !product.unlisted) product else null
+        } catch (e: Exception) {
+            Log.e("FIREBASE_PRODUCT", "Error getting single product entry", e)
+            null
+        }
+    }
+    suspend fun addProduct(product: Product) {
         // pre-generated secure random ID pointer from Firestore
         val freshDocRef = productCollection.document()
         //payload

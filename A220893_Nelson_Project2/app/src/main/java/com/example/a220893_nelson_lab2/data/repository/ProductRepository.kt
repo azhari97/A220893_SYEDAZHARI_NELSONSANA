@@ -8,9 +8,11 @@ import kotlinx.coroutines.tasks.await
 class ProductRepository {
     private val firebaseService: FirebaseProductService = FirebaseProductService()
 
-    suspend fun fetchActiveListings(): List<Product> = firebaseService.getProducts()
+    suspend fun getItems(): List<Product> = firebaseService.getProducts()
 
-    suspend fun addNewListing(product: Product) = firebaseService.uploadProduct(product)
+    suspend fun getOne(id: String): Product? = firebaseService.getOne(id)
+
+    suspend fun save(product: Product) = firebaseService.addProduct(product)
 
     suspend fun softDeleteListing(productId: String) = firebaseService.updateProductToUnlisted(productId)
 

@@ -8,9 +8,10 @@ if (localPropertiesFile.exists()) {
 }
 
 val currentNewsApiKey = localProperties.getProperty("CURRENTNEWS_API_KEY") ?: ""
+val ImgBBApiKey = localProperties.getProperty("IMGBB_API_KEY") ?: ""
+
 
 plugins {
-
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
@@ -36,10 +37,12 @@ android {
 
     buildTypes {
         debug {
+            buildConfigField("String", "IMGBB_API_KEY", "\"${ImgBBApiKey}\"")
             buildConfigField("String", "NEWS_API_KEY", "\"${currentNewsApiKey}\"")
         }
         release {
             isMinifyEnabled = false
+            buildConfigField("String", "IMGBB_API_KEY", "\"${ImgBBApiKey}\"")
             buildConfigField("String", "NEWS_API_KEY", "\"${currentNewsApiKey}\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -84,6 +87,7 @@ dependencies {
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+//    implementation(libs.androidx.compose.foundation)
     ksp(libs.room.compiler)
     // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.11.0")

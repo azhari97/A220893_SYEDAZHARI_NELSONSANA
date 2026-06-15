@@ -5,7 +5,9 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.a220893_nelson_lab2.data.remote.FirebaseCartService
 import com.example.a220893_nelson_lab2.data.repository.CartRepository
+import com.example.a220893_nelson_lab2.data.repository.ProductRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 data class CartItem(
@@ -19,7 +21,7 @@ data class CartItem(
     val extraDetails: String = "",
 
     // Status Guardrails:
-    // 0 = In Cart (Draft)
+    // 0 = In Cart
     // 1 = Pending Approval
     // 2 = Accepted
     // 3 = Rejected
@@ -28,7 +30,8 @@ data class CartItem(
 )
 
 class CartViewModel(
-    private val repository: CartRepository = CartRepository()
+    private val repository: CartRepository,
+    private val productRepository: ProductRepository
 ) : ViewModel() {
 
     private val _cartItems = mutableStateListOf<CartItem>()
@@ -71,7 +74,7 @@ class CartViewModel(
                 status = 0
             )
             try {
-                repository.saveNewItem(newCartItem)
+                repository.saveItem(newCartItem)
                 loadCart(buyerEmail)
             } catch (e: Exception) {
                 Log.e("CART_VM", "Failed to add item to cart", e)
@@ -93,7 +96,6 @@ class CartViewModel(
         }
     }
 
-
     fun updateMeetLocation(cartId: String, meetLocation: String, extraDesc: String, buyerEmail: String) {
         viewModelScope.launch {
             val matchedItem = _cartItems.find { it.id == cartId } ?: return@launch
@@ -103,7 +105,7 @@ class CartViewModel(
                 status = 1
             )
             try {
-                repository.updateExistingItem(updatedItem)
+                repository.updateItem(updatedItem)
                 loadCart(buyerEmail)
             } catch (e: Exception) {
                 Log.e("CART_VM", "Update meeting info error", e)
@@ -116,7 +118,7 @@ class CartViewModel(
             val matchedItem = _cartItems.find { it.id == cartId } ?: return@launch
             val updatedItem = matchedItem.copy(finalPrice = newPrice, status = 1)
             try {
-                repository.updateExistingItem(updatedItem)
+                repository.updateItem(updatedItem)
                 loadAllUserRelatedCarts(buyerEmail)
             } catch (e: Exception) {
                 Log.e("CART_VM", "Price counter-offer failed", e)
@@ -128,8 +130,10 @@ class CartViewModel(
         viewModelScope.launch {
             val matchedItem = _cartItems.find { it.id == cartId } ?: return@launch
             val updatedItem = matchedItem.copy(status = 4)
+
             try {
-                repository.updateExistingItem(updatedItem)
+                repository.updateItem(updatedItem)
+                productRepository.softDeleteListing(matchedItem.productId)
                 loadCart(buyerEmail)
             } catch (e: Exception) {
                 Log.e("CART_VM", "Completion update failed", e)
@@ -148,13 +152,11 @@ class CartViewModel(
         viewModelScope.launch {
             val matchedItem = _cartItems.find { it.id == cartId } ?: return@launch
 
-            // Set explicit target status based on seller action
             val targetStatus = if (isAccepted) 2 else 3
             val updatedItem = matchedItem.copy(status = targetStatus)
 
             try {
-                repository.updateExistingItem(updatedItem)
-                // Reload the system cache to immediately update both UI views
+                repository.updateItem(updatedItem)
                 loadAllUserRelatedCarts(userEmail)
             } catch (e: Exception) {
                 Log.e("CART_VM", "Seller response pipeline failed", e)

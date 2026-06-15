@@ -1,5 +1,6 @@
 package com.example.a220893_nelson_lab2.data.viewmodels
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -20,7 +21,7 @@ class UserViewModel(
     private val repository: UserRepository
 ) : ViewModel() {
 
-    // 🌟 '?' valuechecking to allow this state bucket to be null when logged out
+    //'?' valuechecking and to set this state bucket to be null when logged out
     private val _currentUser = mutableStateOf<User?>(null)
     val currentUser: State<User?> = _currentUser
 
@@ -42,6 +43,7 @@ class UserViewModel(
                 _errorMessage.value = null
             } catch (e: Exception) {
                 _errorMessage.value = "Registration Failed"
+                Log.e("USER_VM","issue here",e)
             }
         }
     }
@@ -53,6 +55,8 @@ class UserViewModel(
                 _errorMessage.value = if (success) null else "No profile matched that email"
             } catch (e: Exception) {
                 _errorMessage.value = "Connection error"
+                Log.e("USER_VM","issue here",e)
+
             }
         }
     }

@@ -37,7 +37,6 @@ interface NewsUiState {
 class NewsViewModel : ViewModel() {
     private val _uiState = mutableStateOf<NewsUiState>(NewsUiState.Loading)
     val uiState: State<NewsUiState> = _uiState
-    // kena buang
         private val apiKey = BuildConfig.NEWS_API_KEY
     init {
         fetchSdg12News()

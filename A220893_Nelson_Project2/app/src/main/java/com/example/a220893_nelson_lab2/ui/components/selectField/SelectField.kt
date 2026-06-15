@@ -27,7 +27,7 @@ fun SimpleSelectField(
     options: List<String>,
     selectedOption: String,
     onOptionSelected: (String) -> Unit,
-    modifier: Modifier = Modifier // 🌟 Allowed parent styling customization
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
 

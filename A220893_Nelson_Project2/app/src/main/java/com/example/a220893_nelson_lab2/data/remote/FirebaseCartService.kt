@@ -10,15 +10,22 @@ class FirebaseCartService {
     private val firestore = FirebaseFirestore.getInstance()
     private val cartCollection = firestore.collection("carts")
 
-    suspend fun getCartItemsForBuyer(buyerEmail: String): List<CartItem> {
+    suspend fun getAllUserCartRecords(email: String): List<CartItem> {
         return try {
-            cartCollection
-                .whereEqualTo("buyerId", buyerEmail.lowercase().trim())
-                .get()
-                .await()
-                .toObjects(CartItem::class.java)
+            val queryEmail = email.lowercase().trim()
+
+            // Get orders where user is the buyer
+            val buyerSnapshot = cartCollection.whereEqualTo("buyerId", queryEmail).get().await()
+            val buyerItems = buyerSnapshot.toObjects(CartItem::class.java)
+
+            // Get orders where user is the seller
+            val sellerSnapshot = cartCollection.whereEqualTo("sellerId", queryEmail).get().await()
+            val sellerItems = sellerSnapshot.toObjects(CartItem::class.java)
+
+            // Merge lists together and drop any duplicate entries by ID
+            (buyerItems + sellerItems).distinctBy { it.id }
         } catch (e: Exception) {
-            android.util.Log.e("FIREBASE_CART", "Error fetching user cart records", e)
+            Log.e("FIREBASE_CART", "Error fetching user cart records", e)
             emptyList()
         }
     }

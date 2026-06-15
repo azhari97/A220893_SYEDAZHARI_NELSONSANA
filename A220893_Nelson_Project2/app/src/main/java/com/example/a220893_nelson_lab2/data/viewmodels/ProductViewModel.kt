@@ -22,9 +22,7 @@ data class Product(
     val unlisted: Boolean = false
 )
 
-class ProductViewModel : ViewModel() {
-    private val repository = ProductRepository()
-
+class ProductViewModel(private val repository: ProductRepository) : ViewModel() {
     private val _products = mutableStateListOf<Product>()
     val products: List<Product> = _products
 
@@ -35,7 +33,7 @@ class ProductViewModel : ViewModel() {
     fun loadProducts() {
         viewModelScope.launch {
             try {
-                val activeListings = repository.fetchActiveListings()
+                val activeListings = repository.getItems()
                 _products.clear()
                 _products.addAll(activeListings)
                 Log.d("PRODUCT_VM", "Successfully synchronized ${activeListings.size} marketplace items.")
@@ -48,7 +46,7 @@ class ProductViewModel : ViewModel() {
     fun addProduct(product: Product) {
         viewModelScope.launch {
             try {
-                repository.addNewListing(product)
+                repository.save(product)
                 loadProducts()
             } catch (e: Exception) {
                 Log.e("PRODUCT_VM", "Could not upload new listing", e)
@@ -68,18 +66,10 @@ class ProductViewModel : ViewModel() {
     }
 
     fun getProductById(id: String): Product? {
-        return _products.find { it.id == id }
+        return _products.find { it.id == (id) }
     }
 
     fun getProductsByUser(email: String): List<Product> {
         return _products.filter { it.ownerId.lowercase() == email.lowercase().trim() }
     }
-
-//    fun getImageResId(context: Context, imgUrl: String): Int {
-//        return context.resources.getIdentifier(
-//            imgUrl,
-//            "drawable",
-//            context.packageName
-//        ).takeIf { it != 0 } ?: R.drawable.justsharestufflogo
-//    }
 }

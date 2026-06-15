@@ -8,9 +8,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class UserRepository(
+
     private val userDao: UserDao,
     private val firebaseService: FirebaseUserService
 ) {
+
     // Expose the local Room data stream to let MainActivity track login state dynamically
     val localUserFlow: Flow<User?> = userDao.getUserFlow().map { entity ->
         entity?.let { User(email = it.email, name = it.name, pImageUrl = it.pImageUrl) }
