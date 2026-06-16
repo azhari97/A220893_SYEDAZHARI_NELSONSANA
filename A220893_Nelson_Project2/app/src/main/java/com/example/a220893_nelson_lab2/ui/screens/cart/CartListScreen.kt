@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
 import com.example.a220893_nelson_lab2.ui.components.emptyState.EmptyState1
 import com.example.a220893_nelson_lab2.ui.components.inforow.InfoRow
@@ -138,11 +139,24 @@ fun CartItemCard(
     var extraDesc by rememberSaveable { mutableStateOf(cartItem.extraDetails) }
     var offerPrice by rememberSaveable { mutableStateOf(cartItem.finalPrice.toString()) }
 
-    val currentUserEmail = userViewModel.currentUser.value?.email ?: ""
+    // sync text inputs whenever the card's data source transitions or updates externally
+    LaunchedEffect(cartItem, showDialog) {
+        if (showDialog) {
+            meetLocation = cartItem.meetLocation
+            extraDesc = cartItem.extraDetails
+            offerPrice = cartItem.finalPrice.toString()
+        }
+    }
 
+    val currentUserEmail = userViewModel.currentUser.value?.email ?: ""
     val isSeller = currentUserEmail.lowercase().trim() == cartItem.sellerId.lowercase().trim()
     val product = productViewModel.getProductById(cartItem.productId)
-    val sellerInfoId = if (isSeller) cartItem.buyerId else cartItem.sellerId
+
+    // check current user
+    val targetUserEmail = if (isSeller) cartItem.buyerId else cartItem.sellerId
+    val displayAccountName = remember(targetUserEmail, productViewModel) {
+        userViewModel.getUserNameByEmail(targetUserEmail) ?: targetUserEmail
+    }
 
     Card(
         modifier = modifier
@@ -163,11 +177,10 @@ fun CartItemCard(
             ) {
                 Column {
                     Text(
-                        text = if (isSeller) "Incoming Offer" else "My Purchase Request",
+                        text = if (isSeller && cartItem.status !=0) "Incoming Offer" else if (!isSeller && cartItem.status !=0) "My Purchase Request" else "Complete Offer Now",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.secondary
                     )
-                    // Safe Check for Product Name
                     if (product != null) {
                         Text(
                             text = product.name,
@@ -207,8 +220,9 @@ fun CartItemCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text(text = if (isSeller) "Buyer" else "Seller", style = MaterialTheme.typography.labelSmall)
-                    Text(text = sellerInfoId, style = MaterialTheme.typography.bodyMedium)
+//                    Text(text = if (isSeller) "Email" else "Email", style = MaterialTheme.typography.labelSmall)
+                    Text(text = "Email", style = MaterialTheme.typography.labelSmall)
+                    Text(text = displayAccountName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(text = "Offer Price", style = MaterialTheme.typography.labelSmall)
@@ -225,45 +239,65 @@ fun CartItemCard(
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text(product?.name ?: "Offer Details") },
+            modifier = Modifier.padding(4.dp),
             text = {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.fillMaxWidth().fillMaxHeight(0.7f),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    userScrollEnabled = true
                 ) {
                     item {
                         Card(
+                            shape = RoundedCornerShape(24.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                            shape = RoundedCornerShape(28.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             if (product != null && product.imgUrl.isNotEmpty()) {
                                 AsyncImage(
                                     model = product.imgUrl,
                                     error = painterResource(R.drawable.justsharestufflogo),
-                                    contentDescription = "Thumbnail for ${product.name}",
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(240.dp),
+                                    contentDescription = "Thumbnail",
+                                    modifier = Modifier.fillMaxWidth().height(240.dp),
                                     contentScale = ContentScale.Crop
                                 )
                             } else {
                                 Image(
                                     painter = painterResource(R.drawable.justsharestufflogo),
                                     contentDescription = "Fallback Logo",
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(240.dp),
+                                    modifier = Modifier.fillMaxWidth().height(240.dp),
                                     contentScale = ContentScale.Crop
                                 )
                             }
                         }
                     }
 
+                    // product details
                     item {
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                            shape = RoundedCornerShape(20.dp)
+                            shape = RoundedCornerShape(24.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(text = "Item Details", style = MaterialTheme.typography.titleSmall)
+                                HorizontalDivider()
+                                Text(text = "Name: ${product?.name ?: "Loading..."}", style = MaterialTheme.typography.bodyMedium)
+                                Text(text = "Condition: ${product?.condition ?: "Loading..."}", style = MaterialTheme.typography.bodyMedium)
+                                Text(text = "Description: ${product?.description ?: "Loading..."}", style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+
+                    // product details
+                    item {
+                        Card(
+                            shape = RoundedCornerShape(24.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
                         ) {
                             Column(
                                 modifier = Modifier.padding(16.dp),
@@ -290,7 +324,6 @@ fun CartItemCard(
                                     1 -> {
                                         Text("Location: ${cartItem.meetLocation}", style = MaterialTheme.typography.bodyMedium)
                                         Text("Details: ${cartItem.extraDetails}", style = MaterialTheme.typography.bodyMedium)
-
                                         Surface(
                                             shape = RoundedCornerShape(12.dp),
                                             color = if (isSeller) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
@@ -324,7 +357,7 @@ fun CartItemCard(
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
                                             Text(
-                                                text = if (isSeller) "You rejected this offer." else "Your offer was rejected. Adjust price below to re-submit.",
+                                                text = if (isSeller) "You rejected this offer." else "Your offer was rejected. Adjust price below before re-submit.",
                                                 modifier = Modifier.padding(12.dp),
                                                 color = MaterialTheme.colorScheme.onErrorContainer
                                             )
@@ -352,59 +385,71 @@ fun CartItemCard(
                 }
             },
             confirmButton = {
-                if (isSeller && cartItem.status == 1) {
-                    Row {
-                        TextButton(
-                            onClick = {
-                                cartViewModel.respondToIncomingOffer(cartItem.id, isAccepted = false, currentUserEmail)
-                                showDialog = false
-                            },
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                if (isSeller) {
+                    // SELLER SIDE ACTIONS
+                    if (cartItem.status == 1) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
                         ) {
-                            Text("Reject Offer")
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                cartViewModel.respondToIncomingOffer(cartItem.id, isAccepted = true, currentUserEmail)
-                                showDialog = false
+                            TextButton(
+                                onClick = {
+                                    cartViewModel.respondToIncomingOffer(cartItem.id, isAccepted = false, currentUserEmail)
+                                    showDialog = false
+                                },
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Text("Reject Offer")
                             }
-                        ) {
-                            Text("Accept Offer")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    cartViewModel.respondToIncomingOffer(cartItem.id, isAccepted = true, currentUserEmail)
+                                    showDialog = false
+                                }
+                            ) {
+                                Text("Accept Offer")
+                            }
                         }
-                    }
-                } else {
-                    val buttonText = when (cartItem.status) {
-                        0 -> "Submit Offer"
-                        2 -> if (!isSeller) "Complete Transaction" else "Close"
-                        3 -> "Retry Offer"
-                        else -> "Close"
                     }
 
-                    Button(
-                        onClick = {
-                            when (cartItem.status) {
-                                0 -> {
-                                    cartViewModel.updateMeetLocation(
-                                        cartItem.id,
-                                        meetLocation,
-                                        extraDesc,
-                                        currentUserEmail
-                                    )
-                                    onStatusChange(1)
-                                }
-                                3 -> if (offerPrice.isNotEmpty()) cartViewModel.updateOfferPrice(cartItem.id, offerPrice.toDouble(), currentUserEmail)
-                                2 -> if (!isSeller) cartViewModel.completeTransaction(cartItem.id, currentUserEmail)
-                            }
-                            showDialog = false
+                } else {
+                    // BUYER SIDE ACTIONS
+                    val showBuyerAction = cartItem.status in listOf(0, 2, 3)
+
+                    if (showBuyerAction) {
+                        val buttonText = when (cartItem.status) {
+                            0 -> "Submit Offer"
+                            2 -> "Complete Transaction"
+                            3 -> "Retry Offer"
+                            else -> "Close"
                         }
-                    ) {
-                        Text(buttonText)
+
+                        Button(
+                            onClick = {
+                                when (cartItem.status) {
+                                    0 -> {
+                                        cartViewModel.updateMeetLocation(cartItem.id, meetLocation, extraDesc, currentUserEmail)
+                                        onStatusChange(1)
+                                    }
+
+                                    3 -> if (offerPrice.isNotEmpty()) {
+                                        cartViewModel.updateOfferPrice(cartItem.id, offerPrice.toDouble(), currentUserEmail)
+                                    }
+                                    2 -> {
+                                        cartViewModel.completeTransaction(cartItem.id, currentUserEmail)
+                                    }
+                                }
+                                showDialog = false
+                            }
+                        ) {
+                            Text(buttonText)
+                        }
                     }
                 }
             },
             dismissButton = {
-                if (!(cartItem.status == 2 && !isSeller)) {
+                if(cartItem.status in listOf(0,1,2,3,4 )){
                     TextButton(onClick = { showDialog = false }) {
                         Text("Close")
                     }
