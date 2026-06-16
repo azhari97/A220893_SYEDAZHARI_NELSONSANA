@@ -63,7 +63,6 @@ object RetrofitClient {
 
     private const val IMGBB_URL = "https://api.imgbb.com/"
     private const val IMGBB_API_KEY = BuildConfig.IMGBB_API_KEY
-
     private val imgUploadService: ImgBbApiService by lazy {
         Retrofit.Builder()
             .baseUrl(IMGBB_URL)
@@ -82,20 +81,16 @@ object RetrofitClient {
                 outputStream
             )
             val imageBytes = outputStream.toByteArray()
-
             // 2. get data into RequestBody
             val requestFile =
                 imageBytes.toRequestBody("image/jpeg".toMediaTypeOrNull(), 0, imageBytes.size)
-
             // 3.dynamic filename format (product_YYYYMMDD_HHMMSS.jpg)
             val timestamp =
                 java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault())
                     .format(java.util.Date())
             val dynamicFileName = "product_$timestamp.jpg"
-
             val multipartBodyFile =
                 MultipartBody.Part.createFormData("image", dynamicFileName, requestFile)
-
             // 4. network request to imgbb and get response
             val networkResponse =
                 imgUploadService.uploadImage(apiKey = IMGBB_API_KEY, image = multipartBodyFile)

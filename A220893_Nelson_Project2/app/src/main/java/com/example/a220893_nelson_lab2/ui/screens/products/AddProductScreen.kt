@@ -63,7 +63,7 @@ fun AddProductScreen(
     var isDropdownExpanded by remember { mutableStateOf(false) }
 
     // camera
-    var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var capturedBitmap by rememberSaveable { mutableStateOf<Bitmap?>(null) }
 
     // camera launcher
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -148,7 +148,7 @@ fun AddProductScreen(
                                 painter = rememberAsyncImagePainter(capturedBitmap),
                                 contentDescription = "Product Image Preview",
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
+//                                contentScale = ContentScale.Crop
                             )
                         } else {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {

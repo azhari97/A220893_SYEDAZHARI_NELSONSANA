@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateListOf
 import com.example.a220893_nelson_lab2.data.repository.UserRepository
 //import com.google.firebase.firestore.auth.User
 import kotlinx.coroutines.flow.collectLatest
@@ -25,14 +26,18 @@ class UserViewModel(
     private val _currentUser = mutableStateOf<User?>(null)
     val currentUser: State<User?> = _currentUser
 
+    val allUsers = mutableStateListOf<User>()
+
     private val _errorMessage = mutableStateOf<String?>(null)
     val errorMessage: State<String?> = _errorMessage
 
     init {
+        // check user logged in or not
         viewModelScope.launch {
             repository.localUserFlow.collectLatest { user ->
                 _currentUser.value = if (user?.email?.isNotBlank() == true) user else null
             }
+            loadAllUsers()
         }
     }
 
@@ -70,6 +75,25 @@ class UserViewModel(
                 _errorMessage.value = "Update failed"
             }
         }
+    }
+
+    private fun loadAllUsers() {
+        viewModelScope.launch {
+            try {
+                val users = repository.getAllUser()
+                allUsers.clear()
+                allUsers.addAll(users)
+                Log.e("USER_VM", "List of all users loaded: $allUsers")
+            } catch (e: Exception) {
+                Log.e("USER_VM", "Failed to populate local user cache pipeline", e)
+            }
+        }
+    }
+    fun getUserNameByEmail(email: String): String? {
+        if (email.isBlank()) return null
+        val cleanedEmail = email.lowercase().trim()
+        val matchedUser = allUsers.find { it.email.lowercase().trim() == cleanedEmail }
+        return matchedUser?.name
     }
 
     fun logout() {

@@ -88,7 +88,7 @@ fun ProductDetailsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(240.dp),
-                            contentScale = ContentScale.Crop
+//                            contentScale = ContentScale.Crop
                         )
                     }else {
                     Image(

@@ -147,12 +147,12 @@ fun CartItemCard(
             offerPrice = cartItem.finalPrice.toString()
         }
     }
-
+    // currentuser
     val currentUserEmail = userViewModel.currentUser.value?.email ?: ""
     val isSeller = currentUserEmail.lowercase().trim() == cartItem.sellerId.lowercase().trim()
     val product = productViewModel.getProductById(cartItem.productId)
 
-    // check current user
+    // check user on card
     val targetUserEmail = if (isSeller) cartItem.buyerId else cartItem.sellerId
     val displayAccountName = remember(targetUserEmail, productViewModel) {
         userViewModel.getUserNameByEmail(targetUserEmail) ?: targetUserEmail
@@ -177,7 +177,7 @@ fun CartItemCard(
             ) {
                 Column {
                     Text(
-                        text = if (isSeller && cartItem.status !=0) "Incoming Offer" else if (!isSeller && cartItem.status !=0) "My Purchase Request" else "Complete Offer Now",
+                        text = if (isSeller && cartItem.status !=0) "Incoming Offer" else if (!isSeller && cartItem.status !=0) "My Purchase Request" else "Fill Offer Details",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.secondary
                     )
@@ -432,12 +432,11 @@ fun CartItemCard(
                                         cartViewModel.updateMeetLocation(cartItem.id, meetLocation, extraDesc, currentUserEmail)
                                         onStatusChange(1)
                                     }
-
-                                    3 -> if (offerPrice.isNotEmpty()) {
-                                        cartViewModel.updateOfferPrice(cartItem.id, offerPrice.toDouble(), currentUserEmail)
-                                    }
                                     2 -> {
                                         cartViewModel.completeTransaction(cartItem.id, currentUserEmail)
+                                    }
+                                    3 -> if (offerPrice.isNotEmpty()) {
+                                        cartViewModel.updateOfferPrice(cartItem.id, offerPrice.toDouble(), currentUserEmail)
                                     }
                                 }
                                 showDialog = false

@@ -18,6 +18,9 @@ class UserRepository(
         entity?.let { User(email = it.email, name = it.name, pImageUrl = it.pImageUrl) }
     }
 
+    suspend fun getAllUser(): List<User> {
+        return firebaseService.getAllUserRecords()
+    }
     suspend fun registerNewUser(name: String, email: String) {
         val user = User(name = name, email = email)
         firebaseService.saveOrUpdateUser(user)

@@ -66,10 +66,8 @@ class ProductViewModel(private val repository: ProductRepository) : ViewModel() 
     }
 
     fun getProductById(id: String): Product? {
-        return _products.find { it.id == (id) }
-    }
-
-    fun getProductsByUser(email: String): List<Product> {
-        return _products.filter { it.ownerId.lowercase() == email.lowercase().trim() }
+        val product = _products.find { it.id == id }
+        Log.e("PRODUCT_VM", "Product : $product")
+        return product
     }
 }
